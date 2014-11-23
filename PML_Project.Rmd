@@ -14,5 +14,117 @@ train<-read.csv("train.csv")
 test<-read.csv("test.csv")
 ```
 
+Load the Caret Package 
 
+```{r cache = TRUE, warning=FALSE}
+library(caret)
+```
 
+Determine which of the variables are not good predictors using the nearZeroVar function that shows which variables do not explain any of the variance in the dataset.
+
+```{r cache = TRUE}
+remove<-nearZeroVar(train)
+train<-train[,-remove]
+```
+
+Remove variables containing NAs. 
+
+```{r cache = TRUE}
+train<-train[ , ! apply( train , 2 , function(x) any(is.na(x)) ) ]
+```
+
+The first six variables of the dataset are informational variables about who the user is and when they are using the device. 
+
+```{r cache = TRUE}
+head(train[,1:6])
+```
+
+Since these variables are unlikely to contribute to the model, use the following code to remove them:
+
+```{r cache = TRUE}
+remove2<-c(1,2,3,4,5,6)
+train<-train[,-remove2]
+```
+
+Next, since computing power may be limited for building random forest models, take a smaller random sample of the full dataset to build a model: 
+
+```{r cache = TRUE}
+set.seed(50)
+Sample<- train[sample(1:nrow(train), 1000, replace=FALSE),]
+```
+
+Split the data on the classe variable into a training and testing set and then split the testing set in to five folds. 
+
+```{r cache = TRUE}
+split<-createDataPartition(y=Sample$classe,p=0.75,list=FALSE)
+trainSample<-Sample[split,]
+testSample<- Sample[-split,]
+testSample1<-testSample[1:50,]
+testSample2<-testSample[51:100,]
+testSample3<-testSample[101:150,]
+testSample4<-testSample[151:200,]
+testSample5<-testSample[201:249,]
+```
+
+Train a random forest model. 
+```{r cache = TRUE}
+mod1<-train(classe~.,method="rf", trControl=trainControl(method="cv",number=4),data=trainSample,prox=TRUE)
+```
+
+Predict on the first testing set. 
+
+```{r cache = TRUE}
+pred1<-predict(mod1,newdata=testSample1)
+tbl1<-table(pred1,testSample1$classe)
+tbl1
+```
+
+The accuracy of the data set is equal to the diagnol of the table divided by 50. 
+
+```{r cache = TRUE}
+accuracy1<-sum(diag(tbl1))/50
+accuracy1
+```
+
+Repeat for the other four test sets:
+
+```{r cache = TRUE}
+pred2<-predict(mod1,newdata=testSample2)
+tbl2<-table(pred2,testSample2$classe)
+accuracy2<-sum(diag(tbl2))/50
+accuracy2
+```
+
+```{r cache = TRUE}
+pred3<-predict(mod1,newdata=testSample3)
+tbl3<-table(pred3,testSample3$classe)
+accuracy3<-sum(diag(tbl3))/50
+accuracy3
+```
+
+```{r cache = TRUE}
+pred4<-predict(mod1,newdata=testSample4)
+tbl4<-table(pred4,testSample4$classe)
+accuracy4<-sum(diag(tbl4))/50
+accuracy4
+```
+
+```{r cache = TRUE}
+pred5<-predict(mod1,newdata=testSample5)
+tbl5<-table(pred5,testSample5$classe)
+accuracy5<-sum(diag(tbl5))/49
+accuracy5
+```
+
+The total accuracy of the model is the average of the prediction accuracy of the test sets or: 
+
+```{r cache = TRUE}
+accuracies<-c(accuracy1,accuracy2,accuracy3,accuracy4,accuracy5)
+mean(accuracies)
+```
+
+The out of sample error is equal to 1 minus the accuracy of the model or: 
+
+```{r cache = TRUE}
+1-mean(accuracies)
+```
